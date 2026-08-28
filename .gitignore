@@ -1,3 +1,31 @@
+# =============================================================================
+# Project-specific
+# =============================================================================
+
+# Environment — NEVER commit actual secrets
+.env
+.env.*
+!.env.example
+
+# Dataset files (downloaded at runtime, never committed)
+data/raw/
+data/benchmark/
+
+# Log output
+logs/
+
+# Results / evaluation output
+results/
+
+# =============================================================================
+# Node / Next.js
+# =============================================================================
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# =============================================================================
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
