@@ -11,3 +11,5 @@ langgraph==0.2.28
 langsmith==0.1.117
 python-dotenv==1.0.1
 httpx==0.27.2
+pgvector==0.3.5
+langchain-groq==0.2.0

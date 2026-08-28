@@ -1,11 +1,16 @@
-# dataset-init service
-# Phase 0: minimal placeholder that exits 0 so Docker Compose can start.
-# Phase 1 will implement Kaggle download + PostgreSQL import.
-
 FROM python:3.12-slim
 
 WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libpq-dev gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY scripts/ ./scripts/
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
