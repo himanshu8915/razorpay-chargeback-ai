@@ -28,6 +28,7 @@ backend/results/phase7/*
 
 # Scratch / dev-only scripts (not part of submission)
 scratch/
+.agents/
 inspect.json
 reset_live_demo.py
 reset_all_decisions.py
