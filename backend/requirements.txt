@@ -1,7 +1,7 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-pydantic==2.8.2
-pydantic-settings==2.4.0
+pydantic>=2.10.0,<3.0
+pydantic-settings>=2.4.0,<3.0
 sqlalchemy==2.0.35
 asyncpg==0.29.0
 alembic==1.13.2
@@ -10,6 +10,10 @@ langchain-core==0.3.0
 langgraph==0.2.28
 langsmith==0.1.117
 python-dotenv==1.0.1
-httpx==0.27.2
+httpx>=0.27.2
 pgvector==0.3.5
 langchain-groq==0.2.0
+
+rank-bm25==0.2.2
+langchain-community==0.3.0
+langchain-google-genai

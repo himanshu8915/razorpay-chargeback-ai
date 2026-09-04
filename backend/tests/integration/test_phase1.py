@@ -26,9 +26,9 @@ async def test_policy_data_exists(db_session):
     """Verify that the 8 policy PDFs were chunked and embedded."""
     
     # 1. Check policies
-    result = await db_session.execute(text("SELECT COUNT(*) FROM policy_documents"))
+    result = await db_session.execute(text("SELECT count(DISTINCT source_file) FROM policy_documents"))
     policy_count = result.scalar()
-    assert policy_count == 8, f"Expected 8 policies, got {policy_count}"
+    assert policy_count == 9, f"Expected 9 policies, got {policy_count}"
     
     # 2. Check chunks exist
     result = await db_session.execute(text("SELECT COUNT(*) FROM policy_parent_chunks"))

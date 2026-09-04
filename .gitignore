@@ -7,15 +7,36 @@
 .env.*
 !.env.example
 
-# Dataset files (downloaded at runtime, never committed)
+# Raw Kaggle dataset downloads (never committed)
 data/raw/
 data/benchmark/
+
+# Committed final demo database artifact (intentionally tracked)
+# backend/data/demo_seed.sql  <-- DO NOT add this to gitignore
+# docker/postgres/init/       <-- DO NOT add this to gitignore
+docker/dataset-init/
 
 # Log output
 logs/
 
-# Results / evaluation output
-results/
+# Results — except the frozen Phase 7 manifests
+backend/results/*
+!backend/results/phase7/
+backend/results/phase7/*
+!backend/results/phase7/demo_portfolio_manifest.json
+!backend/results/phase7/phase7_allocation_master.json
+
+# Scratch / dev-only scripts (not part of submission)
+scratch/
+inspect.json
+reset_live_demo.py
+reset_all_decisions.py
+walkthrough.md
+backend/scratch_exp.py
+backend/inspect_db_policy.py
+backend/test_persistence_fixes.py
+backend/create_tables.py
+backend/scratch_dataset/
 
 # =============================================================================
 # Node / Next.js

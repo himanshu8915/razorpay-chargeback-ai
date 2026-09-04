@@ -25,11 +25,12 @@ class Settings(BaseSettings):
     # LLM Gateway
     llm_provider: str = ""
     llm_api_key: str = ""
+    llm_model: str = "openai/gpt-oss-120b"
 
     # LangSmith observability
-    langsmith_tracing: bool = False
-    langsmith_api_key: str = ""
-    langsmith_project: str = "chargeback-intelligence"
+    langchain_tracing_v2: bool = False
+    langchain_api_key: str = ""
+    langchain_project: str = "chargeback-intelligence"
 
     # Kaggle API credentials
     kaggle_username: str = ""
@@ -41,6 +42,14 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
     log_dir: str = "logs"
+
+    # Phase 5 Pricing Config
+    llm_input_price_per_1k: float = 0.0
+    llm_output_price_per_1k: float = 0.0
+
+    # Phase 5 Decision Thresholds
+    decision_confidence_threshold: float = 0.60
+    decision_min_nev: float = 100.0
 
 
 settings = Settings()

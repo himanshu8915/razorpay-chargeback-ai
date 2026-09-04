@@ -9,7 +9,7 @@ import pytest
 from httpx import AsyncClient
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_health_endpoint(client: AsyncClient):
     """GET /api/v1/health must return 200 with status=ok."""
     response = await client.get("/api/v1/health")
@@ -18,7 +18,7 @@ async def test_health_endpoint(client: AsyncClient):
     assert data["status"] == "ok"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_ready_endpoint_without_db(client: AsyncClient):
     """
     GET /api/v1/ready must return 503 when PostgreSQL is not available.

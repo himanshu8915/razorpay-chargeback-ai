@@ -60,8 +60,8 @@ def test_settings_has_required_fields():
     """Settings object must expose all required configuration keys."""
     assert hasattr(settings, "database_url")
     assert hasattr(settings, "llm_provider")
-    assert hasattr(settings, "langsmith_api_key")
-    assert hasattr(settings, "kaggle_config")
+    assert hasattr(settings, "langchain_api_key")
+    assert hasattr(settings, "kaggle_username")
     assert hasattr(settings, "dispute_deadline_days")
 
 

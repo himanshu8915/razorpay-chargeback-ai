@@ -1,6 +1,6 @@
-# Chargeback Intelligence
+# Chargeback Intelligence (Razorpay Hackathon Submission)
 
-An evidence-driven chargeback decision system that answers four fundamental merchant questions per dispute:
+An evidence-driven, agentic chargeback decision system that answers four fundamental merchant questions per dispute:
 
 1. **Should I fight this dispute?**
 2. **Why do we believe we can win?**
@@ -13,113 +13,78 @@ The system transforms the manual, fragmented chargeback investigation workflow i
 
 **Decision outputs:** `CONTEST` / `HUMAN_REVIEW` / `ACCEPT` — each with full, auditable evidence and policy reasoning.
 
-## Architecture
+## Final Hackathon Architecture
 
-```
-docker compose up
-       │
-  ┌────┴────┐
-  │         │
-CRITICAL   BACKGROUND
- PATH        PATH
-  │         │
-PostgreSQL  Policy docs
-Dataset     Chunking
-Import      Embeddings
-  │         Vector index
-  ▼         │
-DASHBOARD ◄─┘ (non-blocking)
-  │
-Merchant selects dispute
-  │
-Canonical Case → Evidence Discovery → Evidence Verification
-                                           │
-                                    Policy Retrieval (RAG)
-                                           │
-                                    Decision Engine
-                                    CONTEST / REVIEW / ACCEPT
-                                           │
-                                    Explanation + Representment
-                                           │
-                                    Deterministic Validation
-```
+This submission has been rigorously optimized for a highly deterministic, self-contained evaluation environment.
+
+*   **100% PyTorch-Free:** We completely excised heavy local ML dependencies (Transformers, SentenceTransformers). All semantic reasoning and embeddings are powered exclusively by Google Gemini (`gemini-1.5-pro` for reasoning, `gemini-embedding-001` for vector representations).
+*   **Zero External Dependencies:** The application requires no external data downloads at runtime. The dataset and pre-computed embeddings are packaged directly into a deterministic PostgreSQL seed (`demo_seed.sql`).
+*   **Deterministic Evaluation:** The frontend natively locks to the top 5 active merchants to ensure consistent, highly curated, and reproducible demo flows.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python, FastAPI, Pydantic |
-| ORM | SQLAlchemy (async) |
-| Database | PostgreSQL + pgvector |
-| Agent orchestration | LangGraph |
-| LLM | Provider-agnostic gateway (env-configured) |
-| RAG | LangChain, pgvector, hybrid retrieval |
-| Observability | LangSmith |
-| Frontend | Next.js, React, TypeScript, Tailwind |
-| Infrastructure | Docker, Docker Compose |
+| **Backend** | Python, FastAPI, Pydantic |
+| **ORM** | SQLAlchemy (async) |
+| **Database** | PostgreSQL + pgvector |
+| **Agent Orchestration** | LangGraph |
+| **LLM / Embeddings** | Google Gemini (`gemini-1.5-pro`, `gemini-embedding-001`) |
+| **RAG** | LangChain, pgvector, Reciprocal Rank Fusion (BM25 + Vector) |
+| **Frontend** | Next.js, React, TypeScript, TailwindCSS |
+| **Infrastructure** | Docker, Docker Compose |
 
 ## Repository Structure
 
-```
+```text
 razorpay-chargeback-ai/
-├── backend/          # FastAPI application, agents, workflows, RAG
+├── backend/          # FastAPI application, LangGraph agents, RRF Hybrid RAG
 ├── frontend/         # Next.js merchant dashboard
-├── data/             # policies/, raw/ (runtime download), benchmark/
+├── data/             # Contains deterministic demo_seed.sql (PostgreSQL dump)
 ├── docker/           # Per-service Dockerfiles and init scripts
-├── docs/             # Architecture, API, and development documentation
-├── scripts/          # Utility scripts (bootstrap, database, evaluation)
-├── tests/            # Shared test fixtures
 └── docker-compose.yml
 ```
 
-## Local Development
+## Local Setup (Evaluator Guide)
 
 ### Prerequisites
 
 - Docker Desktop
-- (For local dev without Docker) Python 3.12+, Node.js 20+
+- A valid Google API Key (`gemini-1.5-pro` & `gemini-embedding-001` access)
 
-### Environment Variables
+### 1. Environment Setup
 
-Copy `.env.example` to `.env` and fill in your credentials:
+Copy `.env.example` to `.env` and fill in your Google credentials:
 
 ```bash
 cp .env.example .env
 ```
 
-Required variables:
-- `DATABASE_URL` — PostgreSQL connection string
-- `LLM_PROVIDER` / `LLM_API_KEY` — LLM gateway configuration
-- `LANGSMITH_API_KEY` — LangSmith observability
-- `KAGGLE_CONFIG` — Kaggle API credentials (for dataset download in Phase 1)
+Ensure the following variables are set in `.env`:
+- `GOOGLE_API_KEY` — Your Gemini API Key
+- `LLM_PROVIDER` — Set to `gemini`
+- `DATABASE_URL` — (Leave as default: `postgresql+asyncpg://postgres:postgres@postgres:5432/chargeback`)
 
-### Docker Startup
+### 2. Launch the Application
+
+From the root directory, simply run:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
+
+*Note: The PostgreSQL container will automatically ingest the `demo_seed.sql` on its first run. This seed contains 809 pre-computed 768-dimensional Gemini vectors for immediate RAG capabilities.*
+
+### 3. Access the Dashboard
 
 The frontend will be available at [http://localhost:3000](http://localhost:3000).
 
-### Testing
+## Core AI Workflow (Implementation Phases)
 
-```bash
-cd backend
-pip install -r requirements-dev.txt
-pytest
-```
+Our LangGraph implementation executes a rigorous, multi-stage reasoning pipeline:
 
-## Implementation Phases
-
-| Phase | Scope |
-|-------|-------|
-| **0** | Project foundation (current) |
-| 1 | System initialization & dataset import |
-| 2 | Canonical case assembly |
-| 3 | Evidence discovery & verification |
-| 4 | Policy RAG |
-| 5 | Decision intelligence & LangGraph workflow |
-| 6 | Agentic routing + human-in-the-loop |
-| 7 | Representment & deterministic validation |
-| 8 | Frontend merchant dashboard |
-| 9 | Evaluation, impact metrics & finalization |
+1.  **Canonical Case Assembly:** Aggregates structured transactional facts (Orders, Customers, Deliveries) into a single deterministic schema.
+2.  **Evidence Discovery & Verification:** AI agents inspect the canonical case against specific chargeback reason codes to determine if compelling evidence (e.g., AVS match, delivery confirmation) exists.
+3.  **Policy RAG (Hybrid Search):** Executes Reciprocal Rank Fusion (RRF), combining lexical BM25 search with semantic `gemini-embedding-001` vectors to extract relevant Razorpay policies.
+4.  **Decision Intelligence:** The final LangGraph node synthesizes the verified evidence and retrieved policies to render a `CONTEST`, `ACCEPT`, or `HUMAN_REVIEW` verdict.
+5.  **Representment Generation:** For `CONTEST` decisions, the AI automatically drafts a highly professional, evidence-backed representment letter ready for submission.

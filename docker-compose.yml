@@ -6,7 +6,10 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: chargeback
     volumes:
+      # Persistent data volume — survives container restarts
       - postgres_data:/var/lib/postgresql/data
+      # Init scripts — run ONCE on fresh volume (schema + demo seed)
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -14,21 +17,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 10s
-
-  dataset-init:
-    build:
-      context: ./docker/dataset-init
-      dockerfile: Dockerfile
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/chargeback}
-      KAGGLE_USERNAME: ${KAGGLE_USERNAME:-}
-      KAGGLE_KEY: ${KAGGLE_KEY:-}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    # dataset-init exits after completing its work (implemented in Phase 1)
-    restart: "no"
+      start_period: 60s
 
   backend:
     build:
@@ -50,6 +39,8 @@ services:
         condition: service_healthy
     volumes:
       - ./logs:/app/logs
+      - ./backend/results:/app/results
+      - ./backend/app:/app/app
 
   frontend:
     build:
