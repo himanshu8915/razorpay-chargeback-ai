@@ -45,12 +45,14 @@ razorpay-chargeback-ai/
 └── docker-compose.yml
 ```
 
-## Local Setup (Evaluator Guide)
+## 🚀 Local Setup (Evaluator Guide)
+
+We have intentionally packaged the entire stack (Database, Backend, and Next.js Frontend) into a single Docker Compose environment so you can evaluate it instantly without installing local dependencies.
 
 ### Prerequisites
 
-- Docker Desktop
-- A valid Google API Key (`gemini-1.5-pro` & `gemini-embedding-001` access)
+- **Docker Desktop** (No Node.js, Python, or PyTorch required locally!)
+- A valid Google API Key (for `gemini-1.5-pro` & `gemini-embedding-001`)
 
 ### 1. Environment Setup
 
@@ -62,10 +64,11 @@ cp .env.example .env
 
 Ensure the following variables are set in `.env`:
 - `GOOGLE_API_KEY` — Your Gemini API Key
-- `LLM_PROVIDER` — Set to `gemini`
-- `DATABASE_URL` — (Leave as default: `postgresql+asyncpg://postgres:postgres@postgres:5432/chargeback`)
+- `LLM_PROVIDER` — Set to `google`
+- `LLM_MODEL` — Set to `gemini-2.5-flash-lite` (or `gemini-1.5-pro`)
+- `DATABASE_URL` — (Leave as default)
 
-### 2. Launch the Application
+### 2. Launch the Entire Application
 
 From the root directory, simply run:
 
@@ -73,11 +76,14 @@ From the root directory, simply run:
 docker compose up --build -d
 ```
 
-*Note: The PostgreSQL container will automatically ingest the `demo_seed.sql` on its first run. This seed contains 809 pre-computed 768-dimensional Gemini vectors for immediate RAG capabilities.*
+> [!NOTE] 
+> **You do NOT need to run any `npm` or `pip` commands.** 
+> Docker will automatically build the Next.js frontend, install the FastAPI backend, and boot up PostgreSQL. The PostgreSQL container will also automatically ingest the `demo_seed.sql` on its first run, which contains our 5 merchants, 836 disputes, and 809 pre-computed 768-dimensional Gemini vectors for immediate RAG capabilities.
 
 ### 3. Access the Dashboard
 
-The frontend will be available at [http://localhost:3000](http://localhost:3000).
+Once the containers are running, the frontend is immediately available at:
+👉 **[http://localhost:3000](http://localhost:3000)**
 
 ## Core AI Workflow (Implementation Phases)
 
