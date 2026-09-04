@@ -1,0 +1,4 @@
+# Enforce LF line endings for shell scripts and docker files to prevent cross-platform Docker issues
+*.sh text eol=lf
+docker-compose.yml text eol=lf
+Dockerfile text eol=lf
