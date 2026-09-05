@@ -12,6 +12,7 @@ from app.decision.calculators.deadline_risk import calculate_deadline_risk
 from app.decision.rules.decision_engine import evaluate_decision
 from app.decision.models.decision import DecisionRecommendation
 from app.decision.models.factors import TokenUsage
+from app.api.v1.endpoints.execution_state import execution_registry
 
 logger = logging.getLogger(__name__)
 
@@ -19,22 +20,30 @@ def add_token_usage(state: DecisionState, usage: TokenUsage):
     pass # Deprecated in favor of Annotated reducer
 
 def case_strength_node(state: DecisionState) -> dict:
+    dispute_id = state["canonical_case"].dispute.dispute_id
     logger.info("Running Case Strength Node")
+    execution_registry.update_node(dispute_id, "node_case_strength", "Analyzing case strength...")
     strength, usage = analyze_case_strength(state["canonical_case"], state["evidence_assessment"], state["policy_context"])
     return {"case_strength": strength, "token_usage": usage}
 
 def confidence_node(state: DecisionState) -> dict:
+    dispute_id = state["canonical_case"].dispute.dispute_id
     logger.info("Running Confidence Node")
+    execution_registry.update_node(dispute_id, "node_confidence_decision", "Analyzing decision confidence...")
     conf, usage = analyze_confidence(state["canonical_case"], state["evidence_assessment"], state["policy_context"])
     return {"confidence": conf, "token_usage": usage}
 
 def risk_node(state: DecisionState) -> dict:
+    dispute_id = state["canonical_case"].dispute.dispute_id
     logger.info("Running Risk Node")
+    execution_registry.update_node(dispute_id, "node_risk", "Analyzing case risk flags...")
     risk, usage = analyze_risk(state["canonical_case"], state["evidence_assessment"], state["policy_context"])
     return {"risk_assessment": risk, "token_usage": usage}
 
 def calculate_success_node(state: DecisionState) -> dict:
+    dispute_id = state["canonical_case"].dispute.dispute_id
     logger.info("Running Calculate Success Likelihood Node")
+    execution_registry.update_node(dispute_id, "calculate_success", "Calculating success likelihood...")
     p_win = calculate_success_likelihood(
         evidence_assessment=state["evidence_assessment"],
         case_strength=state["case_strength"],
@@ -46,7 +55,9 @@ def calculate_success_node(state: DecisionState) -> dict:
     return {"success_likelihood": p_win}
 
 def calculate_economics_node(state: DecisionState) -> dict:
+    dispute_id = state["canonical_case"].dispute.dispute_id
     logger.info("Running Economics Node")
+    execution_registry.update_node(dispute_id, "calculate_economics", "Calculating economics...")
     recoverable = calculate_recoverable_amount(state["canonical_case"].dispute.dispute_amount)
     expected = calculate_expected_recovery(state["success_likelihood"], recoverable)
     
@@ -69,12 +80,16 @@ def calculate_economics_node(state: DecisionState) -> dict:
     }
 
 def calculate_deadline_node(state: DecisionState) -> dict:
+    dispute_id = state["canonical_case"].dispute.dispute_id
     logger.info("Running Deadline Node")
+    execution_registry.update_node(dispute_id, "calculate_deadline", "Calculating deadline risk...")
     deadline_risk = calculate_deadline_risk(state["canonical_case"].deadline)
     return {"deadline_risk": deadline_risk}
 
 def decision_engine_node(state: DecisionState) -> dict:
+    dispute_id = state["canonical_case"].dispute.dispute_id
     logger.info("Running Decision Engine Node")
+    execution_registry.update_node(dispute_id, "decision_engine", "Evaluating decision engine...")
     action, reasons = evaluate_decision(
         has_critical_conflict=state["risk_assessment"].critical_conflict,
         has_policy_ambiguity=state["risk_assessment"].policy_ambiguity,
@@ -105,7 +120,9 @@ def decision_engine_node(state: DecisionState) -> dict:
     return {"ai_recommendation": rec}
 
 def explanation_node(state: DecisionState) -> dict:
+    dispute_id = state["canonical_case"].dispute.dispute_id
     logger.info("Running Explanation Node")
+    execution_registry.update_node(dispute_id, "explanation_agent", "Generating merchant explanation...")
     explanation, usage = generate_explanation(
         case=state["canonical_case"],
         assessment=state["evidence_assessment"],

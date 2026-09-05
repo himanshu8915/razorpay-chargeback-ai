@@ -14,6 +14,7 @@ from app.evidence.reasoning.completeness import determine_completeness
 from app.evidence.reasoning.conflict_detector import detect_conflicts
 from app.evidence.reasoning.confidence import calculate_confidence
 from app.decision.models.factors import TokenUsage
+from app.api.v1.endpoints.execution_state import execution_registry
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,9 @@ class VerificationState(TypedDict):
     usage_attempts: List[TokenUsage]
 
 def reasoning_node(state: VerificationState) -> dict:
+    dispute_id = state["case"].dispute.dispute_id
     logger.info("Executing reasoning node")
+    execution_registry.update_node(dispute_id, "node_reasoning", "Executing reasoning node...")
     # if we have validation errors from a previous run, the prompt should ideally be stricter.
     # For now we just rerun.
     assessment, usage = reason_evidence(state["case"], state["bundle"])
@@ -49,7 +52,9 @@ def reasoning_node(state: VerificationState) -> dict:
     return {"agent_assessment": assessment, "token_usage": accumulated, "usage_attempts": usage_attempts}
 
 def validation_node(state: VerificationState) -> dict:
+    dispute_id = state["case"].dispute.dispute_id
     logger.info("Executing validation node")
+    execution_registry.update_node(dispute_id, "node_validation", "Executing validation node...")
     is_valid, errors = validate_grounding(state["agent_assessment"], state["bundle"])
     return {"validation_errors": errors, "retry_count": state["retry_count"] + 1}
 
@@ -64,17 +69,23 @@ def routing_after_validation(state: VerificationState) -> str:
     return "completeness"
 
 def completeness_node(state: VerificationState) -> dict:
+    dispute_id = state["case"].dispute.dispute_id
     logger.info("Executing completeness node")
+    execution_registry.update_node(dispute_id, "node_completeness", "Executing completeness node...")
     comp, missing = determine_completeness(state["bundle"])
     return {"completeness": comp, "missing_critical": missing}
 
 def conflict_node(state: VerificationState) -> dict:
+    dispute_id = state["case"].dispute.dispute_id
     logger.info("Executing conflict node")
+    execution_registry.update_node(dispute_id, "node_conflict", "Executing conflict node...")
     conflicts = detect_conflicts(state["bundle"])
     return {"conflicts": conflicts}
 
 def confidence_node(state: VerificationState) -> dict:
+    dispute_id = state["case"].dispute.dispute_id
     logger.info("Executing confidence node")
+    execution_registry.update_node(dispute_id, "node_confidence_verification", "Executing confidence node...")
     conf = calculate_confidence(
         state["agent_assessment"], 
         state["completeness"], 
@@ -84,7 +95,9 @@ def confidence_node(state: VerificationState) -> dict:
     return {"confidence": conf}
 
 def build_assessment_node(state: VerificationState) -> dict:
+    dispute_id = state["case"].dispute.dispute_id
     logger.info("Executing build assessment node")
+    execution_registry.update_node(dispute_id, "node_build", "Executing build assessment node...")
     agent_output = state["agent_assessment"]
     
     # Categorize evidence based on findings
@@ -178,7 +191,8 @@ class EvidenceVerificationService:
             "usage_attempts": []
         }
         
-        result = self.graph.invoke(initial_state)
+        import asyncio
+        result = await asyncio.to_thread(self.graph.invoke, initial_state)
         final = result["final_assessment"]
         usage = result.get("token_usage") or TokenUsage()
         attempts = result.get("usage_attempts", [])

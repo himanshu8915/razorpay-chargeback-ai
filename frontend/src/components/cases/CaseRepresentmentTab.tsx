@@ -3,26 +3,13 @@ import axios from "axios";
 import { FileText, Send, Download, CheckCircle2 } from "lucide-react";
 
 export default function CaseRepresentmentTab({ caseData, representmentData }: { caseData: any, representmentData: any }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   // Use real data if available, otherwise mock from decision_artifact
   const decision = caseData?.decision_artifact;
   
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      await axios.post(`/api/v1/decision/${caseData?.case?.dispute?.dispute_id}/representment`);
-      setIsSubmitting(false);
-    } catch (error: any) {
-      setIsSubmitting(false);
-      if (error.response?.status === 501) {
-        setSubmitError("Representment is not currently available in this environment.");
-      } else {
-        setSubmitError("An error occurred while trying to process the representment.");
-      }
-    }
+  const handleSubmit = () => {
+    setHasSubmitted(true);
   };
   
   if (!representmentData && (!decision || decision.decision !== "CONTEST")) {
@@ -70,12 +57,14 @@ export default function CaseRepresentmentTab({ caseData, representmentData }: { 
           <div className="flex flex-col items-end">
             <button 
               onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+              disabled={hasSubmitted}
+              className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all ${
+                hasSubmitted ? "bg-green-600 hover:bg-green-500" : "bg-blue-600 hover:bg-blue-500"
+              } disabled:opacity-50`}
             >
-              <Send className="w-4 h-4 mr-2" /> {isSubmitting ? "Submitting..." : "Submit to Network"}
+              {hasSubmitted ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              {hasSubmitted ? "SUBMITTED TO NETWORK" : "Submit to Network"}
             </button>
-            {submitError && <span className="text-xs text-red-600 mt-1 font-medium">{submitError}</span>}
           </div>
         </div>
       </div>

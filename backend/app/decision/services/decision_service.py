@@ -59,7 +59,8 @@ class DecisionService:
         }
 
         # Invoke LangGraph Phase 5 Supervisor
-        result = self.graph.invoke(initial_state)
+        import asyncio
+        result = await asyncio.to_thread(self.graph.invoke, initial_state)
 
         # Phase 5 token usage from all specialist agents
         phase5_usage = result.get("token_usage") or TokenUsage()

@@ -32,7 +32,9 @@ class HybridRetriever:
         self._load_embedder()
         # GoogleGenerativeAIEmbeddings returns a list of floats directly
         emb = await self.embedder.aembed_query(query)
-        return emb
+        # Gemini embeddings can return up to 3072 dimensions, but our DB expects 768.
+        # We truncate to 768 dimensions (valid for Matryoshka embeddings).
+        return emb[:768]
 
     async def retrieve(self, query: str, query_embedding: List[float], limit: int = 30) -> List[Dict[str, Any]]:
         # 1. Fetch from Vector (Semantic Search)

@@ -11,6 +11,7 @@ from app.evidence.aggregation.evidence_aggregator import EvidenceAggregator
 from app.evidence.models.evidence_bundle import EvidenceBundle
 from app.decision.models.factors import TokenUsage
 from app.usage.dispute_token_tracker import persist_usage_record
+from app.api.v1.endpoints.execution_state import execution_registry
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,9 @@ class EvidenceDiscoveryService:
         case = await self.case_service.get_case(dispute_id)
         metadata["t_load_case"] = time.time() - t0
         
-        # 2. Case Evidence Planner — now returns (plan, usage)
+        # 2. Case Evidence Planner
         t1 = time.time()
+        execution_registry.update_node(dispute_id, "case_evidence_planner", "Planning case evidence (Case Evidence Planner)...")
         case_plan, case_planner_usage = plan_case_evidence(case, ALLOWED_CASE_FIELDS)
         await persist_usage_record(
             db=self.db,
@@ -67,11 +69,13 @@ class EvidenceDiscoveryService:
         
         # 3. Structured Retrieval (no LLM)
         t2 = time.time()
+        execution_registry.update_node(dispute_id, "structured_retrieval", "Fetching from DB (Structured Retrieval)...")
         structured_evidence = self.structured_retriever.retrieve(case, case_plan)
         metadata["t_structured_retrieval"] = time.time() - t2
         
-        # 4. Policy Evidence Planner — now returns (plan, usage)
+        # 4. Policy Evidence Planner
         t3 = time.time()
+        execution_registry.update_node(dispute_id, "policy_evidence_planner", "Planning policy search (Policy Evidence Planner)...")
         relevant_context = {item.provenance.get("field"): item.content for item in structured_evidence}
         policy_plan, policy_planner_usage = plan_policy_evidence(case, relevant_context)
         await persist_usage_record(
@@ -91,6 +95,7 @@ class EvidenceDiscoveryService:
         
         # 5. Policy Retrieval (no LLM — hybrid BM25+vector)
         t4 = time.time()
+        execution_registry.update_node(dispute_id, "hybrid_policy_retrieval", "Running BM25 & Semantic Search (Hybrid Policy Retrieval)...")
         policy_evidence = await self.policy_retriever.retrieve(policy_plan)
         metadata["t_policy_retrieval_hybrid_rerank"] = time.time() - t4
         
@@ -112,4 +117,5 @@ class EvidenceDiscoveryService:
             f"in {metadata['t_total_phase3']:.2f}s, "
             f"Phase 3 LLM tokens: {phase3_usage.total_tokens}"
         )
+        execution_registry.complete_node(dispute_id, "hybrid_policy_retrieval")
         return bundle, phase3_usage

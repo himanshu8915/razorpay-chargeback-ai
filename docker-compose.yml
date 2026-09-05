@@ -26,7 +26,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/chargeback}
       LLM_PROVIDER: ${LLM_PROVIDER:-}
-      LLM_MODEL: ${LLM_MODEL:-gemini-2.5-flash-lite}
+      LLM_MODEL: ${LLM_MODEL:-gemini-3.5-flash-lite}
       LLM_API_KEY: ${LLM_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}

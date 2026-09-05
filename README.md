@@ -65,7 +65,7 @@ cp .env.example .env
 Ensure the following variables are set in `.env`:
 - `GOOGLE_API_KEY` — Your Gemini API Key
 - `LLM_PROVIDER` — Set to `google`
-- `LLM_MODEL` — Set to `gemini-2.5-flash-lite` (or `gemini-1.5-pro`)
+- `LLM_MODEL` — Set to `gemini-3.5-flash-lite` (or `gemini-1.5-pro`)
 - `DATABASE_URL` — (Leave as default)
 
 ### 2. Launch the Entire Application

@@ -6,23 +6,14 @@ import { DollarSign, ShieldAlert, FileText, AlertTriangle, PlayCircle } from "lu
 export default function CaseOverviewTab({ caseData }: { caseData: any }) {
   const dispute = caseData?.case?.dispute || {};
   const decision = caseData?.decision_artifact || {};
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [hasAcknowledged, setHasAcknowledged] = useState(false);
+  const [hasFought, setHasFought] = useState(false);
   
-  const handleFightCase = async () => {
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      await axios.post(`/api/v1/decision/${dispute.dispute_id}/representment`);
-      // It won't succeed, but just in case
-      setIsSubmitting(false);
-    } catch (error: any) {
-      setIsSubmitting(false);
-      if (error.response?.status === 501) {
-        setSubmitError("Representment is not currently available in this environment.");
-      } else {
-        setSubmitError("An error occurred while trying to process the representment.");
-      }
+  const handleAction = () => {
+    if (decision?.decision === "CONTEST") {
+      setHasFought(true);
+    } else {
+      setHasAcknowledged(true);
     }
   };
   
@@ -142,14 +133,9 @@ export default function CaseOverviewTab({ caseData }: { caseData: any }) {
           </div>
           
           <div className="p-4 bg-gray-50 border-t border-gray-200 mt-auto">
-            {submitError && (
-              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700 font-medium">
-                {submitError}
-              </div>
-            )}
             <button 
-              onClick={handleFightCase}
-              disabled={isSubmitting}
+              onClick={handleAction}
+              disabled={hasFought || hasAcknowledged}
               className={`w-full flex items-center justify-center rounded-md px-3 py-2 text-sm font-bold shadow-sm transition-all ${
                 decision?.decision === "CONTEST" 
                   ? "bg-indigo-600 text-white hover:bg-indigo-500" 
@@ -157,7 +143,9 @@ export default function CaseOverviewTab({ caseData }: { caseData: any }) {
               } disabled:opacity-50`}
             >
               <PlayCircle className="w-5 h-5 mr-2" /> 
-              {isSubmitting ? "PROCESSING..." : (decision?.decision === "CONTEST" ? "FIGHT THIS CASE" : "ACKNOWLEDGE")}
+              {decision?.decision === "CONTEST" 
+                ? (hasFought ? "FIGHT ACKNOWLEDGED" : "FIGHT THIS CASE") 
+                : (hasAcknowledged ? "ACKNOWLEDGED" : "ACKNOWLEDGE")}
             </button>
           </div>
         </div>

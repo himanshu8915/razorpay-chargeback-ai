@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # LLM Gateway
     llm_provider: str = ""
     llm_api_key: str = ""
-    llm_model: str = "openai/gpt-oss-120b"
+    llm_model: str = "gemini-3.5-flash-lite"
 
     # LangSmith observability
     langchain_tracing_v2: bool = False
