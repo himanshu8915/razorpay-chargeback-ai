@@ -212,19 +212,23 @@ export default function CaseOverviewTab({ caseData }: { caseData: any }) {
         <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Token Usage</p>
-            <p className="font-medium text-gray-900">{decision?.token_usage?.total_tokens || 0} tokens</p>
+            <p className="font-medium text-gray-900">{decision?.token_usage?.total_tokens ?? 0} tokens</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Token Cost</p>
-            <p className="font-medium text-gray-900">${(decision?.token_cost?.total_cost || 0).toFixed(4)}</p>
+            <p className="font-medium text-gray-900">${(decision?.token_cost?.total_cost ?? 0).toFixed(4)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Model</p>
-            <p className="font-medium text-gray-900">GPT-4 Turbo</p>
+            <p className="font-medium text-gray-900">{decision?.llm_model || "gemini-3.5-flash-lite"}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Pipeline Duration</p>
-            <p className="font-medium text-gray-900">2.4s</p>
+            <p className="font-medium text-gray-900">
+              {decision?.created_at && decision?.updated_at
+                ? `${((new Date(decision.updated_at).getTime() - new Date(decision.created_at).getTime()) / 1000).toFixed(1)}s`
+                : "N/A"}
+            </p>
           </div>
         </div>
       </div>

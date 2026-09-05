@@ -26,12 +26,25 @@ def analyze_case_strength(case: CanonicalCase, assessment: EvidenceAssessment, p
     DISPUTE CLAIM: {case.dispute.claim}
     DISPUTE REASON: {case.dispute.dispute_reason}
     EVIDENCE COMPLETENESS: {assessment.completeness}
+    OVERALL ASSESSMENT: {assessment.overall_assessment}
     
-    SUPPORTING EVIDENCE IDs: {assessment.supporting_evidence}
-    CONTRADICTING EVIDENCE IDs: {assessment.contradicting_evidence}
+    EVIDENCE FINDINGS ({len(assessment.evidence_findings)} items):
+    {[{
+        "evidence_id": f.evidence_id,
+        "relationship": f.relationship,
+        "claim_aspect": f.claim_aspect,
+        "finding": f.finding,
+        "confidence": f.confidence
+    } for f in assessment.evidence_findings]}
+    
+    SUPPORTING EVIDENCE COUNT: {len(assessment.supporting_evidence)}
+    CONTRADICTING EVIDENCE COUNT: {len(assessment.contradicting_evidence)}
     CONFLICTS: {[c.model_dump() for c in assessment.conflicts]}
+    RISK FLAGS: {assessment.risk_flags}
     
-    Evaluate the case strength.
+    Based on the evidence findings above, score the merchant's case strength.
+    A case is strong when there is substantial supporting evidence, no critical conflicts,
+    and the evidence directly addresses the dispute claim.
     
     {parser.get_format_instructions()}
     """
@@ -41,17 +54,21 @@ def analyze_case_strength(case: CanonicalCase, assessment: EvidenceAssessment, p
         ("human", "{human_msg}")
     ])
     
-    chain = prompt | llm | parser
-    
     try:
-        parsed_dict = chain.invoke({"human_msg": human_msg})
+        # Invoke LLM directly to get AIMessage with usage_metadata
+        formatted = prompt.format_messages(human_msg=human_msg)
+        ai_msg = llm.invoke(formatted)
+        parsed_dict = parser.invoke(ai_msg)
         parsed = CaseStrength(**parsed_dict)
         
+        # Extract real token usage from Gemini response metadata
+        meta = getattr(ai_msg, "usage_metadata", None) or {}
+        from app.config.settings import settings
         usage = TokenUsage(
-            input_tokens=0,
-            output_tokens=0,
-            total_tokens=0,
-            model="unknown"
+            input_tokens=meta.get("input_tokens", 0),
+            output_tokens=meta.get("output_tokens", 0),
+            total_tokens=meta.get("total_tokens", 0),
+            model=settings.llm_model
         )
         
         return parsed, usage

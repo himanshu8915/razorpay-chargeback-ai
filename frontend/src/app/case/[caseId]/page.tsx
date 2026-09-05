@@ -156,7 +156,7 @@ export default function CaseWorkspace() {
               <div className="flex items-center space-x-6 text-sm">
                 <div>
                   <p className="text-gray-500 font-medium">Case Strength</p>
-                  <p className="font-bold text-gray-900">{decisionArtifact.case_strength}/100</p>
+                  <p className="font-bold text-gray-900">{Math.round((decisionArtifact.case_strength || 0) * 100)}/100</p>
                 </div>
                 <div>
                   <p className="text-gray-500 font-medium">Confidence</p>

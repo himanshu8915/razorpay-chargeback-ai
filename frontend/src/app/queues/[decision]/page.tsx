@@ -32,10 +32,11 @@ export default function QueuePage() {
         url = `/api/v1/disputes/unanalyzed?merchant_id=${activeMerchantId}&page=${page}&size=${size}`;
       } else {
         url = `/api/v1/disputes?merchant_id=${activeMerchantId}&decision=${decisionUpper}&page=${page}&size=${size}`;
-        if (sortBy) url += `&sort_by=${sortBy}&sort_desc=${sortDesc}`;
-        if (minAmount) url += `&min_amount=${minAmount}`;
-        if (maxAmount) url += `&max_amount=${maxAmount}`;
       }
+      // Apply filters and sort to both queues
+      if (sortBy) url += `&sort_by=${sortBy}&sort_desc=${sortDesc}`;
+      if (minAmount) url += `&min_amount=${minAmount}`;
+      if (maxAmount) url += `&max_amount=${maxAmount}`;
       const res = await axios.get(url);
       return res.data;
     },

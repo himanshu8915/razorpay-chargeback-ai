@@ -105,6 +105,10 @@ async def list_unanalyzed_disputes(
     merchant_id: str,
     page: int = Query(1, ge=1),
     size: int = Query(25, ge=1, le=100),
+    min_amount: Optional[float] = Query(None),
+    max_amount: Optional[float] = Query(None),
+    sort_by: Optional[str] = Query(None),
+    sort_desc: bool = Query(True),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -122,9 +126,22 @@ async def list_unanalyzed_disputes(
         .where(Order.merchant_id == merchant_id)
         .where(DecisionArtifactModel.dispute_id == None)
         .where(Dispute.dispute_id.in_(live_demo_ids))
-        .order_by(desc(Dispute.dispute_opened_at))
     )
-    
+
+    # Amount filters
+    if min_amount is not None:
+        base_query = base_query.where(Dispute.dispute_amount >= min_amount)
+    if max_amount is not None:
+        base_query = base_query.where(Dispute.dispute_amount <= max_amount)
+
+    # Sorting
+    if sort_by == "amount":
+        order_col = Dispute.dispute_amount
+    else:
+        order_col = Dispute.dispute_opened_at
+
+    base_query = base_query.order_by(desc(order_col) if sort_desc else order_col)
+
     offset = (page - 1) * size
     query = base_query.offset(offset).limit(size)
     

@@ -12,6 +12,7 @@ from app.agents.decision.supervisor import build_decision_graph
 from app.db.models import DecisionArtifactModel
 from app.db.session import AsyncSessionLocal
 from app.decision.models.factors import TokenUsage
+from app.config.settings import settings
 from app.usage.dispute_token_tracker import (
     build_phase_usage_record,
     aggregate_usage_records,
@@ -220,6 +221,7 @@ class DecisionService:
                 "workflow_status": artifact.workflow_status,
                 "created_at": artifact.created_at.isoformat(),
                 "updated_at": artifact.updated_at.isoformat(),
+                "llm_model": settings.llm_model,
             }
         finally:
             await db.close()
