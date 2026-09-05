@@ -60,7 +60,7 @@ The response is generated **only after** the system decides that the case should
 
 The complete production flow from dispute intake to the final auditable decision artifact:
 
-![Chargeback AI — System Architecture](frontend/architecture.png)
+![Chargeback AI — System Architecture](frontend/mermaid-flowchart-2026-09-05T17-46-34.png)
 
 *Figure 1 — End-to-end Chargeback AI architecture. The diagram shows case understanding, evidence and policy retrieval, evidence reasoning, deterministic verification, decisioning, action routing, human review, and the final decision artifact.*
 
