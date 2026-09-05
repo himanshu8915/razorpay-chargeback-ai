@@ -33,7 +33,7 @@ Industry research used for our problem framing reports:
 
 Existing chargeback infrastructure already handles much of the workflow: dispute intake, evidence collection, deadlines and submission.
 
-The harder problem is the **decision layer**:
+The harder problem Merchant still face is the **decision layer**:
 
 - Should we fight this dispute?
 - What evidence supports or contradicts the claim?
