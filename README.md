@@ -47,78 +47,172 @@ That is the gap Chargeback AI targets.
 
 ## 2. What We Built
 
-A dispute moves through an evidence-driven workflow:
+Chargeback AI is a **stateful multi-agent investigation workflow**, not a single LLM prompt.
+
+A dispute enters as structured case data. Specialized agents retrieve and interpret evidence, policy context is retrieved through hybrid RAG, deterministic layers calculate confidence/risk/economics, and the workflow routes the case to the appropriate action.
+
+### End-to-end flow
 
 ```text
-DISPUTE
-   │
-   ▼
-CASE RECONSTRUCTION
-   │
-   ▼
-EVIDENCE PLAN
-   │
-   ├───────────────┐
-   ▼               ▼
-STRUCTURED       POLICY
-EVIDENCE          RAG
-   │               │
-   └───────┬───────┘
-           ▼
-   EVIDENCE REASONING
-           │
-           ▼
-    CONFIDENCE + RISK
-           │
-           ▼
-       ECONOMICS
-           │
-           ▼
-   DETERMINISTIC DECISION
-      /      |       \
-     /       |        \
-CONTEST    ACCEPT   ESCALATE
-                    /
-             NEEDS_EVIDENCE
-           │
-           ▼
-   REPRESENTMENT + CRITIC
+                         DISPUTE
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │ Case Understanding   │
+                 │ Agent               │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │ Evidence Planning   │
+                 │ + Case Plan         │
+                 └──────────┬──────────┘
+                            │
+                  ┌─────────┴─────────┐
+                  ▼                   ▼
+        ┌──────────────────┐  ┌──────────────────┐
+        │ Evidence         │  │ Policy Evidence  │
+        │ Retrieval Agent  │  │ Agent            │
+        │ SQL → Evidence   │  │ BM25 + pgvector  │
+        └────────┬─────────┘  └────────┬─────────┘
+                 │                     │
+                 └──────────┬──────────┘
+                            ▼
+                 ┌─────────────────────┐
+                 │ Evidence Reasoning  │
+                 │ Agent               │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │ Grounding Validator │
+                 │ + Completeness      │
+                 │ + Conflict Check    │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │ Decision Supervisor │
+                 │ Strength · Risk     │
+                 │ Confidence · Econ.  │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │ Deterministic       │
+                 │ Decision Engine     │
+                 └──────────┬──────────┘
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+         CONTEST          ACCEPT       ESCALATE
+             │                            │
+             │                       HUMAN REVIEW
+             ▼                            │
+       Representment                      │
+          Agent                           │
+             │                            │
+             ▼                            │
+          Critic                          │
+             │                            │
+             └──────────────┬─────────────┘
+                            ▼
+                     FINAL CASE STATE
 ```
 
-### A concrete example
+### Agent responsibilities
 
-For a **₹1,249 Product Not Received** dispute, the system can establish:
-
-```text
-Delivery status       → DELIVERED
-Delivery timestamp    → Apr 13
-Dispute claim         → Product not received
-Refund status         → NO REFUND
-```
-
-The evidence engine turns these records into addressable `EvidenceItem`s.
-
-The reasoning layer determines whether each item:
-
-- supports the merchant,
-- contradicts the claim,
-- does not address the claim,
-- or exposes missing/conflicting evidence.
-
-The decision layer then combines evidence strength, confidence, risk and expected economics before routing the case.
-
-**Generation comes after decisioning — not before it.**
-
-### System at a glance
-
-| Decision stage | System responsibility | Control |
+| Agent / component | What it does | Why it exists |
 |---|---|---|
-| **Understand** | Build the canonical case from verified records | SQL + constrained planning |
-| **Retrieve** | Find structured evidence and applicable policy | Evidence IDs + hybrid RAG |
-| **Reason** | Assess support, contradiction, gaps and conflicts | Structured outputs + grounding validation |
-| **Assess** | Score strength, confidence, risk and economics | Deterministic post-processing |
-| **Decide** | Route to contest, accept, evidence request or escalation | Deterministic decision engine |
-| **Act** | Generate and validate representment when justified | Agent + critic + HITL |
+| **Case Understanding Agent** | Interprets the dispute claim and determines the information required for investigation | Gives downstream agents a structured case context |
+| **Evidence Retrieval Agent** | Creates a constrained evidence plan and retrieves relevant transaction/order/delivery/payment/customer/refund records through SQL | Prevents the LLM from guessing or searching the database freely |
+| **Policy Evidence Agent** | Builds the policy query and retrieves applicable policy context using BM25 + semantic search + RRF | Establishes which rules and requirements apply |
+| **Evidence Reasoning Agent** | Evaluates each evidence item as supporting, contradicting or non-probative relative to the claim | Converts retrieved records into decision-relevant evidence |
+| **Decision Supervisor** | Evaluates case strength, confidence, risk, deadline and economics | Turns evidence analysis into a controlled decision state |
+| **Representment Agent** | Generates the response only after the decision engine authorizes `CONTEST` | Keeps response generation downstream of decisioning |
+| **Critic / Review Agent** | Checks the representment for factual errors, unsupported claims, contradictions, missing requirements and completeness | Prevents a grounded case from ending in an ungrounded response |
+
+### Deterministic control layer
+
+Not everything is an agent.
+
+Several critical controls deliberately remain deterministic:
+
+| Control | Implementation |
+|---|---|
+| **Canonical case** | SQL-backed case reconstruction |
+| **Evidence access** | Registered field allowlist + structured queries |
+| **Evidence grounding** | Every cited `Evidence ID` must exist in the retrieved bundle |
+| **Completeness** | Critical-evidence coverage calculation |
+| **Conflict detection** | Detects contradictory findings on the same claim aspect |
+| **Confidence** | Deterministic calculation from completeness, finding confidence and policy coverage |
+| **Risk** | Deterministic checks for conflicts, missing critical evidence and policy ambiguity |
+| **Economics** | Recoverable amount, expected recovery, operational cost and net expected value |
+| **Final routing** | Deterministic `CONTEST / ACCEPT / NEEDS_EVIDENCE / ESCALATE` rules |
+
+This separation is intentional:
+
+> **LLMs reason over evidence. Deterministic components control what the system is allowed to conclude and do.**
+
+### LangGraph as the control plane
+
+LangGraph maintains the investigation state and controls:
+
+- node sequencing
+- conditional branching
+- validation
+- controlled retries
+- missing-evidence routing
+- conflict escalation
+- human-review pauses
+- representment → critic → revision loops
+- final decision state
+
+The workflow therefore behaves like a recoverable investigation process rather than a one-shot generation chain.
+
+### A concrete case
+
+For a **₹1,249 Product Not Received** dispute:
+
+```text
+Claim
+"I never received my order."
+
+SQL-backed facts
+✓ Order exists
+✓ Delivery status = DELIVERED
+✓ Delivery timestamp = Apr 13
+✓ No refund issued
+
+Policy context
+→ Applicable product-not-received requirements
+
+Evidence reasoning
+→ Delivery evidence SUPPORTS merchant
+→ Customer claim CONTRADICTED
+→ No critical evidence missing
+
+Assessment
+→ Strong case
+→ High confidence
+→ Low critical risk
+
+Economics
+→ Expected recovery calculated
+→ Operational cost accounted for
+→ Net expected value evaluated
+
+Decision
+→ CONTEST
+
+Action
+→ Representment generated
+→ Critic validates response
+```
+
+The important point is the ordering:
+
+**The system decides whether the case should be contested before it writes the contest response.**
 
 ---
 
@@ -411,19 +505,6 @@ The system uses a synthetic benchmark and a frozen demo portfolio.
 
 The benchmark is **synthetic and controlled**. Its class distribution should not be interpreted as industry prevalence.
 
-### Dispute classes
-
-| Dispute type | Cases |
-|---|---:|
-| Fraud | 2,000 |
-| Product not received | 1,500 |
-| Unauthorized transaction | 1,500 |
-| Duplicate charge | 1,000 |
-| Product not as described | 1,000 |
-| Refund not received | 1,000 |
-| Processing error | 1,000 |
-| Other | 1,000 |
-| **Total** | **10,000** |
 
 The policy knowledge base contains **809 pre-seeded policy chunks** used by the hybrid retrieval layer.
 
